@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta content="width=device-width,initial-scale=1.0" name="viewport">
+    <title>WebSocket - The Mind</title>
+    <style>
+        header h1 {
+            position: relative;
+            text-align: center;
+            width: 100%;
+            padding: 30px 0;
+            font-size: 40px;
+            margin: 0;
+            color: white;
+            z-index: 2;
+            box-shadow: rgba(0, 0, 0, 0.83) 0 0 10px;
+            text-shadow: white 0 0 25px;
+        }
+
+        header h1::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: -1;
+        }
+
+        header h1::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url("./background.png");
+            background-repeat: no-repeat;
+            background-size: cover;
+            z-index: -2;
+        }
+
+        body {
+            margin: 0;
+            padding-bottom: 3rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #242424;
+            color: white;
+        }
+
+        .button {
+            display: flex;
+            width: fit-content;
+            margin: 25px auto;
+            box-sizing: border-box;
+            padding: 15px 10px;
+            border-radius: 15px;
+            border: solid black 2px;
+            background: #000000;
+            color: white;
+            cursor: pointer;
+            transition: all .3s;
+        }
+
+        .button:hover {
+            color: black;
+            background: white;
+        }
+
+        .alignCenter {
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+        }
+
+        .flex {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-evenly;
+        }
+
+        #status {
+            min-height: 50px;
+        }
+
+        #hand {
+            position: fixed;
+            bottom: 20px;
+            left: 50px;
+            right: 50px;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .card {
+            position: relative;
+            color: white;
+            box-shadow: 0 0 20px #a1a1a1;
+            border-radius: 20px;
+            padding: 40px 35px;
+            font-size: 60px;
+            text-align: center;
+            align-content: center;
+            text-decoration: none;
+            transition: all .3s;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url("./cardBackground.png");
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: -1;
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.55);
+            z-index: -1;
+        }
+
+        .card:hover {
+            box-shadow: 0 0 20px #6a4422;
+        }
+
+        #placedCard .card {
+            box-shadow: 0 0 20px #a1a1a1;
+            border: 2px solid black;
+            cursor: default;
+        }
+
+        #placedCard .card:hover {
+            box-shadow: 0 0 20px #a1a1a1;
+        }
+
+        #throwingStar {
+            background: none;
+            font-size: 20px;
+        }
+
+        #throwingStar::before {
+            background-image: url("./shuriken.png");
+        }
+
+        #throwingStar.waiting {
+            box-shadow: 0 0 20px #8c36a8;
+        }
+
+        #throwingStar.active {
+            box-shadow: 0 0 20px #8c36a8;
+        }
+
+        #throwingStar.active:hover,
+        #throwingStar.waiting:hover {
+            box-shadow: 0 0 20px #522062;
+        }
+
+        /*#throwingStar {
+            width: 100px;
+            height: 100px;
+            border-radius: 100%;
+            background: #c6c6c6;
+            border: 2px solid black;
+            cursor: pointer;
+            color: black;
+            transition: all .3s;
+        }
+
+        #throwingStar:hover {
+            background: black;
+            color: white;
+            box-shadow: 0 0 20px #eaeaea;
+        }
+
+        #throwingStar.active {
+            background: gold;
+        }
+
+        #throwingStar.active:hover {
+            background: #b79b00;
+        }
+
+
+
+        #throwingStar.waiting:hover {
+            background: #3d6c00;
+        }
+
+         */
+    </style>
+</head>
+<header>
+    <h1 id="title">The Mind<br>Projet dev Fullstack</h1>
+</header>
+<body>
+<div class="alignCenter"><h1>Niveau <span id="numLevel">1</span></h1></div>
+<div class="alignCenter" id="status"></div>
+<div class="flex">
+    <div><h3>Nombre de vies : <span id="lives">2</span></h3></div>
+    <div>
+        <button id="throwingStar" onclick="throwStar()" type="button" class="card">Shuriken<br><span id="throwingStarNb">1</span> restant(s)</button>
+    </div>
+</div>
+<div class="alignCenter" id="placedCard">
+    <div class="card" id="cardPlaced"></div>
+</div>
+<div id="hand">
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    const placedCard = document.getElementById('cardPlaced');
+    const status = document.getElementById('status')
+    const hand = document.getElementById("hand");
+    const lives = document.getElementById("lives");
+    const numLevel = document.getElementById("numLevel");
+    const star = document.getElementById("throwingStar");
+    const starNumber = document.getElementById("throwingStarNb");
+    const title = document.getElementById("title");
+    const btnRecommencer = document.createElement("button");
+    btnRecommencer.innerText = "Recommencer";
+    btnRecommencer.id = "btnRecommencer";
+    btnRecommencer.addEventListener("click", restart);
+    btnRecommencer.classList.add("button");
+
+
+    function restart() {
+        socket.emit('restart');
+    }
+
+    function sendCard() {
+        socket.emit('number', parseInt(this.innerText));
+    }
+
+    function throwStar() {
+        socket.emit('star');
+    }
+
+    socket.on('waitingStar', (isActive, isWaiting) => {
+        if (isActive) {
+            star.classList.add("active");
+        } else {
+            star.classList.remove("active");
+        }
+
+        if (isWaiting) {
+            star.classList.add("waiting");
+        } else {
+            star.classList.remove("waiting");
+        }
+    });
+
+    socket.on('updateGame', (niveau, vies, playedCard, newStatus, cards, stars) => {
+        if (niveau !== null) {
+            numLevel.innerHTML = niveau;
+        }
+        if (vies !== null) {
+            lives.innerHTML = vies;
+        }
+        if (playedCard !== null) {
+            placedCard.innerHTML = playedCard;
+        }
+        if (stars !== null) {
+            starNumber.innerHTML = stars;
+        }
+        if (newStatus !== null) {
+            status.innerHTML = newStatus;
+
+            if (newStatus === "Début de la partie !") {
+                title.innerHTML = "The Mind";
+            }
+        }
+
+        if (cards) {
+            hand.innerHTML = "";
+            cards.forEach((card) => {
+                let newCard = document.createElement("a");
+                newCard.classList.add("card");
+                newCard.id = card;
+                newCard.innerText = card;
+                newCard.addEventListener("click", sendCard);
+                hand.appendChild(newCard);
+            });
+        }
+    });
+
+    socket.on('showRestart', () => {
+        let btnRestart = document.getElementById("btnRecommencer");
+        if (!btnRestart) {
+            document.getElementById("placedCard").append(btnRecommencer);
+        }
+
+    });
+
+    socket.on('hideRestart', () => {
+        let btnRestart = document.getElementById("btnRecommencer");
+        if (btnRestart) {
+            btnRestart.remove();
+        }
+    });
+</script>
+</body>
+</html>
